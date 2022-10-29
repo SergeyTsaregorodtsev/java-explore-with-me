@@ -1,17 +1,21 @@
 package ru.practicum.ewm.service.adm;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import ru.practicum.ewm.common.ForbiddenRequestException;
 import ru.practicum.ewm.model.Location;
 import ru.practicum.ewm.model.category.Category;
 import ru.practicum.ewm.model.event.*;
 import ru.practicum.ewm.repository.CategoryRepository;
 import ru.practicum.ewm.repository.EventRepository;
+import ru.practicum.ewm.repository.RequestRepository;
 import ru.practicum.ewm.statclient.StatClient;
 
 import javax.persistence.EntityNotFoundException;
@@ -24,10 +28,13 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AdminEventService {
-    private final EventRepository eventRepository;
-    private final CategoryRepository categoryRepository;
-    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    EventRepository eventRepository;
+    CategoryRepository categoryRepository;
+    RequestRepository requestRepository;
+    StatClient client;
+    static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public List<EventFullDto> getEvents(EventAdminFilter filter,
                                         int from,
@@ -37,9 +44,12 @@ public class AdminEventService {
         Iterable<Event> events = eventRepository.findAll(formatExpression(filter), page);
         List<EventFullDto> result = new ArrayList<>();
         for (Event event : events) {
-            result.add(EventMapper.toFullDto(event, StatClient.getViews(event.getId())));
+            result.add(EventMapper.toFullDto(
+                    event,
+                    requestRepository.getConfirmedRequestsAmount(event.getId()),
+                    client.getViews(event.getId())));
         }
-        log.trace("Позапросу получены {} событий.", result.size());
+        log.trace("По запросу получены {} событий.", result.size());
         return result;
     }
 
@@ -94,7 +104,10 @@ public class AdminEventService {
         eventRepository.save(updEvent);
 
         log.trace("Event ID {} updated.", updEvent.getId());
-        return EventMapper.toFullDto(updEvent, StatClient.getViews(updEvent.getId()));
+        return EventMapper.toFullDto(
+                updEvent,
+                requestRepository.getConfirmedRequestsAmount(updEvent.getId()),
+                client.getViews(updEvent.getId()));
     }
 
     public EventFullDto publishEvent(int eventId) {
@@ -103,10 +116,23 @@ public class AdminEventService {
             throw new EntityNotFoundException("Event with requested ID not found.");
         }
         Event pubEvent = event.get();
+        // Дата начала события должна быть не ранее чем за час от даты публикации
+        LocalDateTime eventDate = pubEvent.getEventDate();
+        if (LocalDateTime.now().plusHours(1).isAfter(eventDate)) {
+            throw new ForbiddenRequestException("Error: Дата начала события должна быть не ранее чем за час от даты публикации.");
+        }
+        // Событие должно быть в состоянии ожидания публикации
+        if (pubEvent.getState() != Event.State.PENDING) {
+            throw new ForbiddenRequestException("Error: Событие должно быть в состоянии ожидания публикации.");
+        }
+
         pubEvent.setState(Event.State.PUBLISHED);
         pubEvent.setPublishedOn(LocalDateTime.now());
         log.trace("Event ID {} published.", eventId);
-        return EventMapper.toFullDto(eventRepository.save(pubEvent), StatClient.getViews(eventId));
+        return EventMapper.toFullDto(
+                eventRepository.save(pubEvent),
+                requestRepository.getConfirmedRequestsAmount(eventId),
+                client.getViews(eventId));
     }
 
     public EventFullDto rejectEvent(int eventId) {
@@ -114,10 +140,18 @@ public class AdminEventService {
         if (event.isEmpty()) {
             throw new EntityNotFoundException("Event with requested ID not found.");
         }
-        Event pubEvent = event.get();
-        pubEvent.setState(Event.State.CANCELED);
+        Event rejectedEvent = event.get();
+        // Событие не должно быть опубликовано
+        if (rejectedEvent.getState() == Event.State.PUBLISHED) {
+            throw new ForbiddenRequestException("Error: Событие не должно быть опубликовано.");
+        }
+
+        rejectedEvent.setState(Event.State.CANCELED);
         log.trace("Event ID {} cancelled.", eventId);
-        return EventMapper.toFullDto(eventRepository.save(pubEvent), StatClient.getViews(eventId));
+        return EventMapper.toFullDto(
+                eventRepository.save(rejectedEvent),
+                requestRepository.getConfirmedRequestsAmount(eventId),
+                client.getViews(eventId));
     }
 
     private BooleanExpression formatExpression(EventAdminFilter filter) {

@@ -17,6 +17,6 @@ public class Category {
     private int id;
 
     @NonNull
-    @Column(name = "name", nullable = false, length = 255)
+    @Column(name = "name", nullable = false, length = 255, unique = true)
     private String name;
 }

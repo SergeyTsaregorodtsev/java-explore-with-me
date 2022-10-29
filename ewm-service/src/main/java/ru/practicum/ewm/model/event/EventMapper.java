@@ -12,21 +12,21 @@ import java.time.format.DateTimeFormatter;
 public class EventMapper {
     static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    public static EventShortDto toShortDto(Event event, int views) {
+    public static EventShortDto toShortDto(Event event, int confirmedRequests, int views) {
         return new EventShortDto(
                 event.getId(),
                 CategoryMapper.toDto(event.getCategory()),
                 event.getTitle(),
                 event.getAnnotation(),
                 UserMapper.toShortDto(event.getInitiator()),
-                event.getConfirmedRequests(),
+                confirmedRequests,
                 event.getEventDate().format(formatter),
                 event.isPaid(),
                 views
         );
     }
 
-    public static EventFullDto toFullDto(Event event, int views) {
+    public static EventFullDto toFullDto(Event event, int confirmedRequests, int views) {
         return new EventFullDto(
                 event.getId(),
                 CategoryMapper.toDto(event.getCategory()),
@@ -34,7 +34,7 @@ public class EventMapper {
                 event.getAnnotation(),
                 event.getDescription(),
                 UserMapper.toShortDto(event.getInitiator()),
-                event.getConfirmedRequests(),
+                confirmedRequests,
                 event.getEventDate().format(formatter),
                 event.getCreatedOn().format(formatter),
                 (event.getState() == Event.State.PUBLISHED) ? event.getPublishedOn().format(formatter) : null,

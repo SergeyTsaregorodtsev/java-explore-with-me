@@ -2,8 +2,14 @@ package ru.practicum.ewm.service.pub;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import ru.practicum.ewm.model.category.*;
+import ru.practicum.ewm.model.category.Category;
+import ru.practicum.ewm.model.category.CategoryDto;
+import ru.practicum.ewm.model.category.CategoryMapper;
 import ru.practicum.ewm.repository.CategoryRepository;
 
 import javax.persistence.EntityNotFoundException;
@@ -18,9 +24,12 @@ public class PublicCategoryService {
     private final CategoryRepository repository;
 
     // Получение категорий
-    public List<CategoryDto> getCategories() {
+    public List<CategoryDto> getCategories(int from, int size) {
+        Sort sortingBy = Sort.by(Sort.Direction.ASC, "id");
+        Pageable page = PageRequest.of(from / size, size, sortingBy);
+        Page<Category> categories = repository.findAll(page);
         List<CategoryDto> result = new ArrayList<>();
-        for (Category category : repository.findAll()) {
+        for (Category category : categories) {
             result.add(CategoryMapper.toDto(category));
         }
         log.trace("По запросу получены {} категорий.", result.size());

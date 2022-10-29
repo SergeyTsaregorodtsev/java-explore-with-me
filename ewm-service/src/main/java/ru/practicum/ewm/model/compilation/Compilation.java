@@ -28,8 +28,8 @@ public class Compilation {
     @NonNull
     @ManyToMany(cascade = {CascadeType.ALL})
     @JoinTable(name = "event_compilations",
-            joinColumns = {@JoinColumn(name = "event_id")},
-            inverseJoinColumns = {@JoinColumn(name = "compilation_id")}
+            joinColumns = {@JoinColumn(name = "compilation_id")},
+            inverseJoinColumns = {@JoinColumn(name = "event_id")}
     )
     private Set<Event> events;
 

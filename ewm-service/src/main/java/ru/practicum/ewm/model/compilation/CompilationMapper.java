@@ -19,10 +19,12 @@ public class CompilationMapper {
         );
     }
 
-    public static CompilationDto toDto(Compilation compilation, Map<Integer,Integer> views) {
+    public static CompilationDto toDto(Compilation compilation,
+                                       Map<Integer,Integer> confirmedRequests,
+                                       Map<Integer,Integer> views) {
         List<EventShortDto> events = new ArrayList<>();
         for (Event event : compilation.getEvents()) {
-            events.add(EventMapper.toShortDto(event, views.get(event.getId())));
+            events.add(EventMapper.toShortDto(event, confirmedRequests.get(event.getId()), views.get(event.getId())));
         }
         return new CompilationDto(
                 compilation.getId(),

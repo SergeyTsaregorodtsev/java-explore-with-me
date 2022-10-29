@@ -7,6 +7,8 @@ import com.google.gson.JsonParser;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -25,13 +27,18 @@ import java.util.List;
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class StatClient {
-    static String url = "http://localhost:9090";
-    static Gson gson = new Gson();
-    static HttpClient client = HttpClient.newHttpClient();
-    static HttpResponse.BodyHandler<String> handler = HttpResponse.BodyHandlers.ofString();
-    static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    String url;
+    Gson gson = new Gson();
+    HttpClient client = HttpClient.newHttpClient();
+    HttpResponse.BodyHandler<String> handler = HttpResponse.BodyHandlers.ofString();
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    public static void sendStat(EndpointHitDto hit) {
+    @Autowired
+    public StatClient(@Value("${statServerUrl:http://localhost:9090}") String url) {
+        this.url = url;
+    }
+
+    public void sendStat(EndpointHitDto hit) {
         String json = gson.toJson(hit);
         HttpRequest.BodyPublisher body = HttpRequest.BodyPublishers.ofString(json);
         HttpRequest request = HttpRequest.newBuilder()
@@ -51,7 +58,7 @@ public class StatClient {
         }
     }
 
-    public static List<ViewStats> receiveStat(LocalDateTime start, LocalDateTime end, String[] uris, boolean unique) {
+    public List<ViewStats> receiveStat(LocalDateTime start, LocalDateTime end, String[] uris, boolean unique) {
         StringBuilder sb = new StringBuilder();
         sb.append("?start=");
         sb.append(URLEncoder.encode(start.format(formatter),java.nio.charset.StandardCharsets.UTF_8));
@@ -70,7 +77,7 @@ public class StatClient {
                 .version(HttpClient.Version.HTTP_1_1)
                 .header("Accept", "application/json")
                 .build();
-        log.trace("Отправлен GET-запрос в Stats по событиям: {}", Arrays.toString(uris));
+        log.trace("Отправлен GET-запрос в Stats по событиям: {}, URI: {}", Arrays.toString(uris), request.uri());
         String result = "";
         try {
             HttpResponse<String> response = client.send(request, handler);
@@ -95,7 +102,7 @@ public class StatClient {
         return stats;
     }
 
-    public static int getViews(int eventId) {
+    public int getViews(int eventId) {
         String[] uri = new String[]{"/events/" + eventId};
         List<ViewStats> stats = receiveStat(LocalDateTime.now().minusHours(1), LocalDateTime.now(), uri, true);
         return stats.get(0).getHits();

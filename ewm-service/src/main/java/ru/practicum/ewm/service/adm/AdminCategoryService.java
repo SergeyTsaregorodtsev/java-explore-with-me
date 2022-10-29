@@ -3,10 +3,12 @@ package ru.practicum.ewm.service.adm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import ru.practicum.ewm.common.ForbiddenRequestException;
 import ru.practicum.ewm.model.category.Category;
 import ru.practicum.ewm.model.category.CategoryDto;
 import ru.practicum.ewm.model.category.CategoryMapper;
 import ru.practicum.ewm.repository.CategoryRepository;
+import ru.practicum.ewm.repository.EventRepository;
 
 import javax.persistence.EntityNotFoundException;
 import java.util.Optional;
@@ -16,6 +18,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AdminCategoryService {
     private final CategoryRepository categoryRepository;
+    private final EventRepository eventRepository;
 
     public CategoryDto addCategory(CategoryDto categoryDto) {
         Category category = categoryRepository.save(CategoryMapper.toCategory(categoryDto));
@@ -39,7 +42,11 @@ public class AdminCategoryService {
     }
 
     public void removeCategory(int catId) {
-        log.trace("Category ID {} removed.", catId);
+        // С категорией не должно быть связано ни одного события
+        if (eventRepository.getCategoryEventAmount(catId) != 0) {
+            throw new ForbiddenRequestException("Error: с категорией не должно быть связано ни одного события.");
+        }
         categoryRepository.deleteById(catId);
+        log.trace("Category ID {} removed.", catId);
     }
 }

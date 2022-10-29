@@ -1,6 +1,8 @@
 package ru.practicum.ewm.service.priv;
 
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.common.ForbiddenRequestException;
@@ -22,10 +24,11 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrivateRequestService {
-    private final RequestRepository requestRepository;
-    private final UserRepository userRepository;
-    private final EventRepository eventRepository;
+    RequestRepository requestRepository;
+    UserRepository userRepository;
+    EventRepository eventRepository;
 
     // Получение информации о заявках текущего пользователя на участие в чужих событиях
     public List<ParticipationRequestDto> getRequests(int userId) {
@@ -48,19 +51,25 @@ public class PrivateRequestService {
         if (event.isEmpty()) {
             throw new EntityNotFoundException("Event with requested ID not found.");
         }
+        // Нельзя добавить повторный запрос
         if (requestRepository.findByEvent_IdAndRequester_Id(eventId, userId) != null) {
             throw new ForbiddenRequestException("Request already exists.");
         }
+        // Инициатор события не может добавить запрос на участие в своём событии
         if (event.get().getInitiator().getId() == userId) {
             throw new ForbiddenRequestException("Participation request to own event.");
         }
+        // Нельзя участвовать в неопубликованном событии
         if (event.get().getState() != Event.State.PUBLISHED) {
             throw new ForbiddenRequestException("Event is not published yet.");
         }
-        if (event.get().getConfirmedRequests() == event.get().getParticipantLimit()) {
+        // Если у события достигнут лимит запросов на участие - необходимо вернуть ошибку
+        int confirmedRequests = requestRepository.getConfirmedRequestsAmount(eventId);
+        if (confirmedRequests == event.get().getParticipantLimit()) {
             throw new ForbiddenRequestException("Participant limit reached.");
         }
-        ParticipationRequest.Status status = (!event.get().isRequestModeration()) ?
+        // Если для события отключена пре-модерация запросов на участие, то запрос должен перейти в состояние подтвержденного
+        ParticipationRequest.Status status = (event.get().getParticipantLimit() == 0 || !event.get().isRequestModeration()) ?
                 ParticipationRequest.Status.CONFIRMED :
                 ParticipationRequest.Status.PENDING;
         ParticipationRequest request = new ParticipationRequest(
@@ -68,8 +77,9 @@ public class PrivateRequestService {
                 user.get(),
                 LocalDateTime.now(),
                 status);
-        log.trace("Добавлена заявка ID {} от пользователя ID {} на событие ID {}.", request.getId(), userId, eventId);
-        return ParticipationRequestMapper.toDto(requestRepository.save(request));
+        ParticipationRequest newRequest = requestRepository.save(request);
+        log.trace("Добавлена заявка ID {} от пользователя ID {} на событие ID {}.", newRequest.getId(), userId, eventId);
+        return ParticipationRequestMapper.toDto(newRequest);
     }
 
     // Отмена своего запроса на участие в событии

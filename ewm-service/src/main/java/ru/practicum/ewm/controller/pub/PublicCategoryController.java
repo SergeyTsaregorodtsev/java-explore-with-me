@@ -2,10 +2,7 @@ package ru.practicum.ewm.controller.pub;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.model.category.CategoryDto;
 import ru.practicum.ewm.service.pub.PublicCategoryService;
 
@@ -20,9 +17,10 @@ public class PublicCategoryController {
 
     // Получение категорий
     @GetMapping
-    public List<CategoryDto> getCategories() {
-        log.trace("Получен GET-запрос на категории.");
-        return service.getCategories();
+    public List<CategoryDto> getCategories(@RequestParam(name = "from", defaultValue = "0") int from,
+                                           @RequestParam(name = "size", defaultValue = "10") int size) {
+        log.trace("Получен GET-запрос на категории, from [{}], size [{}].", from, size);
+        return service.getCategories(from, size);
     }
 
     //Получение информации о категории по её идентификатору

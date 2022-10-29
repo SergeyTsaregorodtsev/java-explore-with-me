@@ -1,6 +1,8 @@
 package ru.practicum.ewm.service.priv;
 
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,11 +32,13 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrivateEventService {
-    private final EventRepository eventRepository;
-    private final CategoryRepository categoryRepository;
-    private final UserRepository userRepository;
-    private final RequestRepository requestRepository;
+    EventRepository eventRepository;
+    CategoryRepository categoryRepository;
+    UserRepository userRepository;
+    RequestRepository requestRepository;
+    StatClient client;
     static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     // Получение событий, добавленных текущим пользователем
@@ -44,7 +48,10 @@ public class PrivateEventService {
         Page<Event> eventPage = eventRepository.findAllByInitiator_Id(userId, page);
         List<EventShortDto> result = new ArrayList<>();
         for (Event event : eventPage.getContent()) {
-            result.add(EventMapper.toShortDto(event, StatClient.getViews(event.getId())));
+            result.add(EventMapper.toShortDto(
+                    event,
+                    requestRepository.getConfirmedRequestsAmount(event.getId()),
+                    client.getViews(event.getId())));
         }
         log.trace("Получены {} событий для пользователя ID {}.", result.size(), userId);
         return result;
@@ -54,6 +61,7 @@ public class PrivateEventService {
     public EventFullDto updateEvent(int userId, UpdateEventRequest request) {
         Event event = getEvent(request.getEventId());
 
+        // Изменить можно только отмененные события или события в состоянии ожидания модерации
         if (event.getState() != Event.State.PENDING && event.getState() != Event.State.CANCELED) {
             throw new ForbiddenRequestException("Only pending or canceled events can be changed");
         }
@@ -85,7 +93,13 @@ public class PrivateEventService {
         }
         String eventDate = request.getEventDate();
         if (eventDate != null) {
-            event.setEventDate(LocalDateTime.parse(eventDate, formatter));
+            LocalDateTime newDate = LocalDateTime.parse(eventDate, formatter);
+            // Дата и время на которые намечено событие не может быть раньше, чем через два часа от текущего момента
+            if (newDate.isBefore(LocalDateTime.now().plusHours(2))) {
+                throw new ForbiddenRequestException("Invalid new date and time for event: must be later than " +
+                        LocalDateTime.now().plusHours(2).format(formatter));
+            }
+            event.setEventDate(newDate);
         }
         Boolean paid = request.getPaid();
         if (paid != null) {
@@ -95,13 +109,17 @@ public class PrivateEventService {
         if (participantLimit != null) {
             event.setParticipantLimit(participantLimit);
         }
+        // Отменённое событие автоматически переходит в состояние ожидания модерации
         if (event.getState() == Event.State.CANCELED) {
             event.setState(Event.State.PENDING);
         }
         eventRepository.save(event);
 
         log.trace("Event ID {} updated.", event.getId());
-        return EventMapper.toFullDto(event, StatClient.getViews(event.getId()));
+        return EventMapper.toFullDto(
+                event,
+                requestRepository.getConfirmedRequestsAmount(event.getId()),
+                client.getViews(event.getId()));
     }
 
     // Добавление нового события
@@ -115,7 +133,7 @@ public class PrivateEventService {
         if (user.isEmpty()) {
             throw new EntityNotFoundException("User with requested ID not found.");
         }
-
+        // Дата и время на которые намечено событие не может быть раньше, чем через два часа от текущего момента
         LocalDateTime createdOn = LocalDateTime.now();
         LocalDateTime eventDate = LocalDateTime.parse(eventDto.getEventDate(), formatter);
         if (eventDate.minusHours(2).isBefore(createdOn)) {
@@ -124,7 +142,7 @@ public class PrivateEventService {
 
         Event event = eventRepository.save(EventMapper.toEvent(eventDto, user.get(), category.get(), createdOn));
         log.trace("Добавлено событие {}, ID {}.", event.getTitle(), event.getId());
-        return EventMapper.toFullDto(event, 0);
+        return EventMapper.toFullDto(event, 0,0);
     }
 
     // Получение полной информации о событии добавленном текущим пользователем
@@ -134,7 +152,10 @@ public class PrivateEventService {
             throw new ForbiddenRequestException("User ID " + userId + "not corresponding to requested event initiator.");
         }
         log.trace("Получено событие ID {} для пользователя ID {}.", eventId, userId);
-        return EventMapper.toFullDto(event, StatClient.getViews(eventId));
+        return EventMapper.toFullDto(
+                event,
+                requestRepository.getConfirmedRequestsAmount(event.getId()),
+                client.getViews(eventId));
     }
 
     // Отмена события добавленного текущим пользователем
@@ -143,9 +164,16 @@ public class PrivateEventService {
         if (event.getInitiator().getId() != userId) {
             throw new ForbiddenRequestException("User ID " + userId + "not corresponding to requested event initiator.");
         }
+        // Отменить можно только событие в состоянии ожидания модерации
+        if (event.getState() != Event.State.PENDING) {
+            throw new ForbiddenRequestException("Error: can't cancel event in " + event.getState() + "state.");
+        }
         event.setState(Event.State.CANCELED);
         log.trace("Отмена события ID {} пользователем ID {}.", eventId, userId);
-        return EventMapper.toFullDto(eventRepository.save(event), StatClient.getViews(eventId));
+        return EventMapper.toFullDto(
+                eventRepository.save(event),
+                requestRepository.getConfirmedRequestsAmount(event.getId()),
+                client.getViews(eventId));
     }
 
     // Получение информации о запросах на участие в событии текущего пользователя
@@ -162,7 +190,7 @@ public class PrivateEventService {
         return result;
     }
 
-    // Подтверждение-отклонение чужой заявки на участие в событии текущего пользователя
+    // Подтверждение / отклонение чужой заявки на участие в событии текущего пользователя
     public ParticipationRequestDto confirmRequest(int userId, int eventId, int reqId, boolean accept) {
         Event event = getEvent(eventId);
         if (event.getInitiator().getId() != userId) {
@@ -172,13 +200,40 @@ public class PrivateEventService {
         if (request.isEmpty()) {
             throw new EntityNotFoundException("Request with requested ID not found.");
         }
+        if ((request.get().getStatus().equals(ParticipationRequest.Status.CONFIRMED) && accept) ||
+            (request.get().getStatus().equals(ParticipationRequest.Status.REJECTED) && !accept)) {
+            throw new ForbiddenRequestException("Error: request ID " + reqId + " " + request.get().getStatus() + "already.");
+        }
+
         ParticipationRequest currentRequest = request.get();
         if (accept) {
+            // Проверка на свободные места (лимит по заявкам - подтверждённые заявки)
+            int acceptedRequests = requestRepository.getConfirmedRequestsAmount(eventId);
+            int vacancies = event.getParticipantLimit() - acceptedRequests;
+            log.trace("Проверка одобренных заявок: {} из {}.", acceptedRequests, event.getParticipantLimit());
+
+            if (vacancies == 0) {
+                throw new ForbiddenRequestException("Sorry, participation limit " + event.getParticipantLimit() + " reached.");
+            }
+            if (vacancies == 1) {
+                // Отмена остальных заявок на событие
+                List<ParticipationRequest> requests = requestRepository.findAllByEvent_IdAndAndStatus(
+                        eventId,
+                        ParticipationRequest.Status.PENDING);
+                for (ParticipationRequest req : requests) {
+                    req.setStatus(ParticipationRequest.Status.REJECTED);
+                    requestRepository.save(req);
+                }
+            }
             currentRequest.setStatus(ParticipationRequest.Status.CONFIRMED);
         } else {
             currentRequest.setStatus(ParticipationRequest.Status.REJECTED);
         }
-        return ParticipationRequestMapper.toDto(requestRepository.save(currentRequest));
+        ParticipationRequest confirmedRequest = requestRepository.save(currentRequest);
+        log.trace("Заявка {} на событие {} {} ({} из {}).",
+                reqId, eventId, confirmedRequest.getStatus(),
+                requestRepository.getConfirmedRequestsAmount(eventId), event.getParticipantLimit());
+        return ParticipationRequestMapper.toDto(confirmedRequest);
     }
 
     private Event getEvent(int eventId) {
