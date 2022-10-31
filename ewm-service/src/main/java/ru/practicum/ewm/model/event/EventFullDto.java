@@ -12,7 +12,7 @@ import ru.practicum.ewm.model.user.UserShortDto;
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class EventFullDto {
-    int id;
+    long id;
     CategoryDto category;
     String title;
     String annotation;

@@ -7,7 +7,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public class EventUserFilter {
     String text;
-    int[] categories;
+    long[] categories;
     Boolean paid;
     String rangeStart;
     String rangeEnd;

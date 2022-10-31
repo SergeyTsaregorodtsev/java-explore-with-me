@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 public class ParticipationRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private long id;
 
     @NonNull
     @ManyToOne @JoinColumn(name = "event_id", nullable = false)
@@ -27,13 +27,13 @@ public class ParticipationRequest {
     private User requester;
 
     @NonNull
-    @Column(name = "created")
+    @Column(name = "created", nullable = false)
     private LocalDateTime created;
 
     @NonNull
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
-    Status status;
+    private Status status;
 
     public enum Status {
         PENDING, CONFIRMED, REJECTED, CANCELED

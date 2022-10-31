@@ -5,7 +5,9 @@ import lombok.experimental.FieldDefaults;
 import org.hibernate.validator.constraints.Length;
 import ru.practicum.ewm.model.Location;
 
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Positive;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -13,18 +15,18 @@ import javax.validation.constraints.NotNull;
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class NewEventDto {
-    @NotNull
-    int category;
-    @NotNull
+    @Positive
+    long category;
+    @NotBlank
     @Length(min = 3, max = 120)
     String title;
-    @NotNull
+    @NotBlank
     @Length(min = 20, max = 2000)
     String annotation;
-    @NotNull
+    @NotBlank
     @Length(min = 20, max = 7000)
     String description;
-    @NotNull
+    @NotBlank
     String eventDate;
     @NotNull
     Location location;

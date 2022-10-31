@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-public interface StatRepository extends JpaRepository<EndpointHit, Integer> {
+public interface StatRepository extends JpaRepository<EndpointHit, Long> {
 
-    public List<EndpointHit> findAllByUriAndTimeStampBetween(String uri, LocalDateTime start, LocalDateTime end);
+    List<EndpointHit> findAllByUriAndAppAndTimeStampBetween(String uri, String app, LocalDateTime start, LocalDateTime end);
 }

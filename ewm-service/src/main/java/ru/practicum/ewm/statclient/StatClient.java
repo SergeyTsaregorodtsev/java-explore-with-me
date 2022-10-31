@@ -28,14 +28,15 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class StatClient {
     String url;
-    Gson gson = new Gson();
-    HttpClient client = HttpClient.newHttpClient();
-    HttpResponse.BodyHandler<String> handler = HttpResponse.BodyHandlers.ofString();
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    Gson gson;
+    static HttpClient client = HttpClient.newHttpClient();
+    static HttpResponse.BodyHandler<String> handler = HttpResponse.BodyHandlers.ofString();
+    static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Autowired
-    public StatClient(@Value("${statServerUrl:http://localhost:9090}") String url) {
+    public StatClient(@Value("${statServerUrl:http://localhost:9090}") String url, Gson gson) {
         this.url = url;
+        this.gson = gson;
     }
 
     public void sendStat(EndpointHitDto hit) {
@@ -102,7 +103,7 @@ public class StatClient {
         return stats;
     }
 
-    public int getViews(int eventId) {
+    public int getViews(long eventId) {
         String[] uri = new String[]{"/events/" + eventId};
         List<ViewStats> stats = receiveStat(LocalDateTime.now().minusHours(1), LocalDateTime.now(), uri, true);
         return stats.get(0).getHits();

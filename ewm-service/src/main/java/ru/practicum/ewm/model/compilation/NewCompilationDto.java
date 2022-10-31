@@ -4,14 +4,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import javax.validation.constraints.NotNull;
+import javax.validation.constraints.NotBlank;
 
 @Getter
 @Setter
 @NoArgsConstructor
 public class NewCompilationDto {
-    @NotNull
-    String title;
-    int[] events;
-    Boolean pinned;
+    @NotBlank
+    private String title;
+    private long[] events;
+    private Boolean pinned;
 }

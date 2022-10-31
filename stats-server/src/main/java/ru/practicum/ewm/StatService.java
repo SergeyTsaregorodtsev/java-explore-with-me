@@ -13,7 +13,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class StatService {
     private final StatRepository repository;
-    static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public void hit(EndpointHitDto dto) {
         EndpointHit hit = repository.save(EndpointHitMapper.toEndpointHit(dto));
@@ -23,8 +23,9 @@ public class StatService {
     public List<ViewStats> get(String start, String end, String[] uris, boolean unique) {
         List<ViewStats> result = new ArrayList<>();
         for (String uri : uris) {
-            List<EndpointHit> hits = repository.findAllByUriAndTimeStampBetween(
+            List<EndpointHit> hits = repository.findAllByUriAndAppAndTimeStampBetween(
                     uri,
+                    "ewm-main-service",
                     LocalDateTime.parse(start, formatter),
                     LocalDateTime.parse(end, formatter));
             int views;

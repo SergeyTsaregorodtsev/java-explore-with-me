@@ -15,11 +15,11 @@ import java.util.Set;
 public class Compilation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private long id;
 
     @NonNull
     @Column(name = "title", nullable = false)
-    String title;
+    private String title;
 
     @NonNull
     @Column(name = "pinned", nullable = false)
@@ -32,5 +32,4 @@ public class Compilation {
             inverseJoinColumns = {@JoinColumn(name = "event_id")}
     )
     private Set<Event> events;
-
 }

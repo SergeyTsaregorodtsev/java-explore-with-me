@@ -1,5 +1,9 @@
 package ru.practicum.ewm.model.user;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class UserMapper {
 
     public static User toUser(NewUserRequest userRequest) {

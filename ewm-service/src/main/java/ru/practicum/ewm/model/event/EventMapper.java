@@ -1,5 +1,7 @@
 package ru.practicum.ewm.model.event;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import ru.practicum.ewm.model.Location;
 import ru.practicum.ewm.model.category.Category;
 import ru.practicum.ewm.model.category.CategoryMapper;
@@ -9,8 +11,9 @@ import ru.practicum.ewm.model.user.UserMapper;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class EventMapper {
-    static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public static EventShortDto toShortDto(Event event, int confirmedRequests, int views) {
         return new EventShortDto(

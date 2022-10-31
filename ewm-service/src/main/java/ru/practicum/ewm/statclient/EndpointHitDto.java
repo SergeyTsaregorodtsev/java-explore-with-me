@@ -9,7 +9,6 @@ import javax.validation.constraints.NotNull;
 @Getter
 @Setter
 @AllArgsConstructor
-
 public class EndpointHitDto {
     @NotNull
     private String app;

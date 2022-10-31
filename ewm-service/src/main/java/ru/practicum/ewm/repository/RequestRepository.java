@@ -8,18 +8,18 @@ import ru.practicum.ewm.model.request.ParticipationRequest;
 import java.util.List;
 
 @Repository
-public interface RequestRepository extends JpaRepository<ParticipationRequest, Integer> {
+public interface RequestRepository extends JpaRepository<ParticipationRequest, Long> {
 
-    List<ParticipationRequest> findAllByEvent_Id(int eventId);
+    List<ParticipationRequest> findAllByEvent_Id(long eventId);
 
-    List<ParticipationRequest> findAllByRequesterId(int userId);
+    List<ParticipationRequest> findAllByRequesterId(long userId);
 
-    ParticipationRequest findByEvent_IdAndRequester_Id(int eventId, int requesterId);
+    ParticipationRequest findByEvent_IdAndRequester_Id(long eventId, long requesterId);
 
     @Query("select count(request) " +
            "from ParticipationRequest request " +
            "where request.event.id = ?1 and request.status = 'CONFIRMED'")
-    int getConfirmedRequestsAmount(int eventId);
+    int getConfirmedRequestsAmount(long eventId);
 
-    List<ParticipationRequest> findAllByEvent_IdAndAndStatus(int eventId, ParticipationRequest.Status status);
+    List<ParticipationRequest> findAllByEvent_IdAndStatus(long eventId, ParticipationRequest.Status status);
 }

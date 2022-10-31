@@ -9,9 +9,9 @@ import lombok.experimental.FieldDefaults;
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ParticipationRequestDto {
-    int id;
-    int event;
-    int requester;
+    long id;
+    long event;
+    long requester;
     String created;
     String status;
 }

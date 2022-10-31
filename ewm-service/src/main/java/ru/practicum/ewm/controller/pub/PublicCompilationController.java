@@ -27,7 +27,7 @@ public class PublicCompilationController {
 
     //Получение подборки событий по его id
     @GetMapping("/{compId}")
-    public CompilationDto getCompilation(@PathVariable int compId) {
+    public CompilationDto getCompilation(@PathVariable long compId) {
         log.trace("Получен GET-запрос на подборку ID {}.", compId);
         return service.getCompilation(compId);
     }

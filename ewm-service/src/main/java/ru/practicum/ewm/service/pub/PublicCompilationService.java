@@ -29,8 +29,8 @@ public class PublicCompilationService {
     public List<CompilationDto> getCompilations() {
         List<CompilationDto> result = new ArrayList<>();
         for (Compilation compilation : compilationRepository.findAll()) {
-            Map<Integer,Integer> views = new HashMap<>();
-            Map<Integer,Integer> confirmedRequests = new HashMap<>();
+            Map<Long,Integer> views = new HashMap<>();
+            Map<Long,Integer> confirmedRequests = new HashMap<>();
             for (Event event : compilation.getEvents()) {
                 views.put(event.getId(), client.getViews(event.getId()));
                 confirmedRequests.put(event.getId(), requestRepository.getConfirmedRequestsAmount(event.getId()));
@@ -42,14 +42,14 @@ public class PublicCompilationService {
     }
 
     // Получение подробной информации об опубликованном событии по его идентификатору
-    public CompilationDto getCompilation(int compId) {
+    public CompilationDto getCompilation(long compId) {
         Optional<Compilation> compilation = compilationRepository.findById(compId);
         if (compilation.isEmpty()) {
             throw new EntityNotFoundException("Compilation with requested ID not found.");
         }
         log.trace("По запросу получена подборка ID {}.", compId);
-        Map<Integer,Integer> views = new HashMap<>();
-        Map<Integer,Integer> confirmedRequests = new HashMap<>();
+        Map<Long,Integer> views = new HashMap<>();
+        Map<Long,Integer> confirmedRequests = new HashMap<>();
         for (Event event : compilation.get().getEvents()) {
             views.put(event.getId(), client.getViews(event.getId()));
             confirmedRequests.put(event.getId(), requestRepository.getConfirmedRequestsAmount(event.getId()));

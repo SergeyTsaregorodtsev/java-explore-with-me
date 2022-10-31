@@ -11,7 +11,6 @@ import ru.practicum.ewm.repository.CategoryRepository;
 import ru.practicum.ewm.repository.EventRepository;
 
 import javax.persistence.EntityNotFoundException;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -27,21 +26,17 @@ public class AdminCategoryService {
     }
 
     public CategoryDto updateCategory(CategoryDto categoryDto) {
-        Optional<Category> category = categoryRepository.findById(categoryDto.getId());
-        if (category.isEmpty()) {
-            throw new EntityNotFoundException("Category with requested ID not found.");
-        }
-        Category updateCategory = category.get();
-
+        Category category = categoryRepository.findById(categoryDto.getId())
+                .orElseThrow(() -> {
+                    throw new EntityNotFoundException("Category with requested ID not found.");
+        });
         String name = categoryDto.getName();
-        if (name != null) {
-            updateCategory.setName(name);
-        }
+        category.setName(name);
         log.trace("Category ID {} updated.", categoryDto.getId());
-        return CategoryMapper.toDto(categoryRepository.save(updateCategory));
+        return CategoryMapper.toDto(categoryRepository.save(category));
     }
 
-    public void removeCategory(int catId) {
+    public void removeCategory(long catId) {
         // С категорией не должно быть связано ни одного события
         if (eventRepository.getCategoryEventAmount(catId) != 0) {
             throw new ForbiddenRequestException("Error: с категорией не должно быть связано ни одного события.");

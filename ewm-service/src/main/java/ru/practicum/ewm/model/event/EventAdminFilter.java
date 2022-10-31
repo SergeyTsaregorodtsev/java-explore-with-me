@@ -6,9 +6,9 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class EventAdminFilter {
-    int[] users;
+    long[] users;
     String[] states;
-    int[] categories;
+    long[] categories;
     String rangeStart;
     String rangeEnd;
 }

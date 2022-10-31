@@ -19,7 +19,6 @@ import javax.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -31,7 +30,7 @@ public class PrivateRequestService {
     EventRepository eventRepository;
 
     // Получение информации о заявках текущего пользователя на участие в чужих событиях
-    public List<ParticipationRequestDto> getRequests(int userId) {
+    public List<ParticipationRequestDto> getRequests(long userId) {
         List<ParticipationRequest> requests = requestRepository.findAllByRequesterId(userId);
         List<ParticipationRequestDto> result = new ArrayList<>();
         for (ParticipationRequest request : requests) {
@@ -42,54 +41,48 @@ public class PrivateRequestService {
     }
 
     // Добавление запроса от текущего пользователя на участие в событии
-    public ParticipationRequestDto addRequest(int userId, int eventId) {
-        Optional<User> user = userRepository.findById(userId);
-        Optional<Event> event = eventRepository.findById(eventId);
-        if (user.isEmpty()) {
+    public ParticipationRequestDto addRequest(long userId, long eventId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> {
             throw new EntityNotFoundException("User with requested ID not found.");
-        }
-        if (event.isEmpty()) {
+        });
+        Event event = eventRepository.findById(eventId).orElseThrow(() -> {
             throw new EntityNotFoundException("Event with requested ID not found.");
-        }
+        });
+
         // Нельзя добавить повторный запрос
         if (requestRepository.findByEvent_IdAndRequester_Id(eventId, userId) != null) {
             throw new ForbiddenRequestException("Request already exists.");
         }
         // Инициатор события не может добавить запрос на участие в своём событии
-        if (event.get().getInitiator().getId() == userId) {
+        if (event.getInitiator().getId() == userId) {
             throw new ForbiddenRequestException("Participation request to own event.");
         }
         // Нельзя участвовать в неопубликованном событии
-        if (event.get().getState() != Event.State.PUBLISHED) {
+        if (event.getState() != Event.State.PUBLISHED) {
             throw new ForbiddenRequestException("Event is not published yet.");
         }
         // Если у события достигнут лимит запросов на участие - необходимо вернуть ошибку
         int confirmedRequests = requestRepository.getConfirmedRequestsAmount(eventId);
-        if (confirmedRequests == event.get().getParticipantLimit()) {
+        if (confirmedRequests == event.getParticipantLimit()) {
             throw new ForbiddenRequestException("Participant limit reached.");
         }
         // Если для события отключена пре-модерация запросов на участие, то запрос должен перейти в состояние подтвержденного
-        ParticipationRequest.Status status = (event.get().getParticipantLimit() == 0 || !event.get().isRequestModeration()) ?
+        ParticipationRequest.Status status = (event.getParticipantLimit() == 0 || !event.isRequestModeration()) ?
                 ParticipationRequest.Status.CONFIRMED :
                 ParticipationRequest.Status.PENDING;
-        ParticipationRequest request = new ParticipationRequest(
-                event.get(),
-                user.get(),
-                LocalDateTime.now(),
-                status);
+        ParticipationRequest request = new ParticipationRequest(event, user, LocalDateTime.now(), status);
         ParticipationRequest newRequest = requestRepository.save(request);
         log.trace("Добавлена заявка ID {} от пользователя ID {} на событие ID {}.", newRequest.getId(), userId, eventId);
         return ParticipationRequestMapper.toDto(newRequest);
     }
 
     // Отмена своего запроса на участие в событии
-    public ParticipationRequestDto cancelRequest(int userId, int requestId) {
-        Optional<ParticipationRequest> request = requestRepository.findById(requestId);
-        if (request.isEmpty()) {
+    public ParticipationRequestDto cancelRequest(long userId, long requestId) {
+        ParticipationRequest request = requestRepository.findById(requestId).orElseThrow(() -> {
             throw new EntityNotFoundException("Request with requested ID not found.");
-        }
-        request.get().setStatus(ParticipationRequest.Status.CANCELED);
-        log.trace("Отмена заявки ID {} от пользователя ID {}, статус - {}.", requestId, userId, request.get().getStatus());
-        return ParticipationRequestMapper.toDto(requestRepository.save(request.get()));
+        });
+        request.setStatus(ParticipationRequest.Status.CANCELED);
+        log.trace("Отмена заявки ID {} от пользователя ID {}, статус - {}.", requestId, userId, request.getStatus());
+        return ParticipationRequestMapper.toDto(requestRepository.save(request));
     }
 }

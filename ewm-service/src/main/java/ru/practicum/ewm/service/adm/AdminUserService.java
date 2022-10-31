@@ -15,7 +15,8 @@ import ru.practicum.ewm.repository.UserRepository;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 @Slf4j
 @Service
@@ -23,7 +24,7 @@ import java.util.Optional;
 public class AdminUserService {
     private final UserRepository repository;
 
-    public List<UserDto> getUsers(int[] ids, int from, int size) {
+    public List<UserDto> getUsers(long[] ids, int from, int size) {
         List<UserDto> result = new ArrayList<>();
 
         if (ids.length == 0) {
@@ -34,13 +35,9 @@ public class AdminUserService {
                 result.add(UserMapper.toDto(user));
             }
         } else {
-            for (int i : ids) {
-                Optional<User> user = repository.findById(i);
-                if (user.isPresent()) {
-                    result.add(UserMapper.toDto(user.get()));
-                } else {
-                    log.trace("Пользователь ID {} не найден.", i);
-                }
+            List<Long> idList = LongStream.of(ids).boxed().collect(Collectors.toList());
+            for (User user : repository.findAllByIdIn(idList)) {
+                result.add(UserMapper.toDto(user));
             }
         }
         return result;
@@ -52,7 +49,7 @@ public class AdminUserService {
         return UserMapper.toDto(user);
     }
 
-    public void removeUser(int userId) {
+    public void removeUser(long userId) {
         repository.deleteById(userId);
     }
 }

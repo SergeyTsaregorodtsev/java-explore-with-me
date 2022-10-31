@@ -53,14 +53,14 @@ public class AdminEventService {
         return result;
     }
 
-    public EventFullDto updateEvent(int eventId, AdminUpdateEventRequest request) {
+    public EventFullDto updateEvent(long eventId, AdminUpdateEventRequest request) {
         Optional<Event> event = eventRepository.findById(eventId);
         if (event.isEmpty()) {
             throw new EntityNotFoundException("Event with requested ID not found.");
         }
         Event updEvent = event.get();
 
-        Integer categoryId = request.getCategory();
+        Long categoryId = request.getCategory();
         if (categoryId != null) {
             Optional<Category> category = categoryRepository.findById(categoryId);
             if (category.isEmpty()) {
@@ -110,7 +110,7 @@ public class AdminEventService {
                 client.getViews(updEvent.getId()));
     }
 
-    public EventFullDto publishEvent(int eventId) {
+    public EventFullDto publishEvent(long eventId) {
         Optional<Event> event = eventRepository.findById(eventId);
         if (event.isEmpty()) {
             throw new EntityNotFoundException("Event with requested ID not found.");
@@ -135,7 +135,7 @@ public class AdminEventService {
                 client.getViews(eventId));
     }
 
-    public EventFullDto rejectEvent(int eventId) {
+    public EventFullDto rejectEvent(long eventId) {
         Optional<Event> event = eventRepository.findById(eventId);
         if (event.isEmpty()) {
             throw new EntityNotFoundException("Event with requested ID not found.");
@@ -157,8 +157,8 @@ public class AdminEventService {
     private BooleanExpression formatExpression(EventAdminFilter filter) {
         BooleanExpression result = null;
         if (filter.getUsers() != null) {
-            List<Integer> users = new ArrayList<>();
-            for (Integer i : filter.getUsers()) {
+            List<Long> users = new ArrayList<>();
+            for (Long i : filter.getUsers()) {
                 users.add(i);
             }
             result = QEvent.event.initiator.id.in(users);
@@ -172,8 +172,8 @@ public class AdminEventService {
                     : result.and(QEvent.event.state.in(states));
         }
         if (filter.getCategories() != null) {
-            List<Integer> categories = new ArrayList<>();
-            for (Integer i : filter.getCategories()) {
+            List<Long> categories = new ArrayList<>();
+            for (Long i : filter.getCategories()) {
                 categories.add(i);
             }
             result = (result == null) ? QEvent.event.category.id.in(categories)

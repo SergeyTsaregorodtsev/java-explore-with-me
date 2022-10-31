@@ -16,7 +16,8 @@ public class StatController {
     @PostMapping("/hit")
     public void hit(@RequestBody EndpointHitDto hit) {
         service.hit(hit);
-        log.trace("Получен POST-запрос по запросу на {} от пользователя IP {}.", hit.getUri(), hit.getIp());
+        log.trace("Получен POST-запрос приложения '{}' по запросу на {} от пользователя IP {}.",
+                hit.getApp(), hit.getUri(), hit.getIp());
     }
 
     @GetMapping("/stats")

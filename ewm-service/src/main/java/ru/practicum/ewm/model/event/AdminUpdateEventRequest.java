@@ -10,7 +10,7 @@ import ru.practicum.ewm.model.Location;
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class AdminUpdateEventRequest {
-    Integer category;
+    Long category;
     String title;
     String annotation;
     String description;

@@ -2,9 +2,9 @@ package ru.practicum.ewm.service.pub;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -23,17 +23,26 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PublicEventService {
     EventRepository eventRepository;
     RequestRepository requestRepository;
     StatClient client;
     static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    String appName;
+
+    public PublicEventService(EventRepository eventRepository,
+                              RequestRepository requestRepository,
+                              StatClient client,
+                              @Value("${appName}") String appName) {
+        this.eventRepository = eventRepository;
+        this.requestRepository = requestRepository;
+        this.client = client;
+        this.appName = appName;
+    }
 
     // Получение событий с возможностью фильтрации
     public List<EventShortDto> getEvents(EventUserFilter filter, String sort, int from, int size, HttpServletRequest request) {
@@ -46,7 +55,7 @@ public class PublicEventService {
         for (Event event : events) {
             String uri = "/events/" + event.getId();
             uris.add(uri);
-            client.sendStat(new EndpointHitDto("ewm-main-service",
+            client.sendStat(new EndpointHitDto(appName,
                     uri,
                     request.getRemoteAddr(),
                     LocalDateTime.now().format(formatter)));
@@ -81,17 +90,16 @@ public class PublicEventService {
     }
 
     // Получение подробной информации об опубликованном событии по его идентификатору
-    public EventFullDto getEvent(int eventId, HttpServletRequest request) {
-        Optional<Event> event = eventRepository.findById(eventId);
-        if (event.isEmpty()) {
+    public EventFullDto getEvent(long eventId, HttpServletRequest request) {
+        Event event = eventRepository.findById(eventId).orElseThrow(() -> {
             throw new EntityNotFoundException("Event with requested ID not found.");
-        }
-        if (event.get().getState() != Event.State.PUBLISHED) {
+        });
+        if (event.getState() != Event.State.PUBLISHED) {
             throw new ForbiddenRequestException("Event " + eventId + " is not published yet.");
         }
 
         // Отправка статистики по запросу события
-        client.sendStat(new EndpointHitDto("ewm-main-service",
+        client.sendStat(new EndpointHitDto(appName,
                 request.getRequestURI(),
                 request.getRemoteAddr(),
                 LocalDateTime.now().format(formatter)));
@@ -101,7 +109,7 @@ public class PublicEventService {
         List<ViewStats> stats = client.receiveStat(LocalDateTime.now().minusHours(1), LocalDateTime.now(), uri, true);
         int views = stats.get(0).getHits();
         int confirmedRequests = requestRepository.getConfirmedRequestsAmount(eventId);
-        return EventMapper.toFullDto(event.get(), confirmedRequests, views);
+        return EventMapper.toFullDto(event, confirmedRequests, views);
     }
 
     private BooleanExpression formatExpression(EventUserFilter filter) {
@@ -112,8 +120,8 @@ public class PublicEventService {
                 .or(QEvent.event.annotation.likeIgnoreCase(filter.getText())));
 
         if (filter.getCategories() != null) {
-            List<Integer> categories = new ArrayList<>();
-            for (Integer i: filter.getCategories()) {
+            List<Long> categories = new ArrayList<>();
+            for (Long i: filter.getCategories()) {
                 categories.add(i);
             }
             result = result.and(QEvent.event.category.id.in(categories));
