@@ -17,8 +17,8 @@ import ru.practicum.ewm.repository.UserRepository;
 
 import javax.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -32,10 +32,10 @@ public class PrivateRequestService {
     // Получение информации о заявках текущего пользователя на участие в чужих событиях
     public List<ParticipationRequestDto> getRequests(long userId) {
         List<ParticipationRequest> requests = requestRepository.findAllByRequesterId(userId);
-        List<ParticipationRequestDto> result = new ArrayList<>();
-        for (ParticipationRequest request : requests) {
-            result.add(ParticipationRequestMapper.toDto(request));
-        }
+        List<ParticipationRequestDto> result = requests
+                .stream()
+                .map(ParticipationRequestMapper::toDto)
+                .collect(Collectors.toList());
         log.trace("Получены {} заявок для пользователя ID {}.", result.size(), userId);
         return result;
     }
@@ -78,9 +78,10 @@ public class PrivateRequestService {
 
     // Отмена своего запроса на участие в событии
     public ParticipationRequestDto cancelRequest(long userId, long requestId) {
-        ParticipationRequest request = requestRepository.findById(requestId).orElseThrow(() -> {
-            throw new EntityNotFoundException("Request with requested ID not found.");
-        });
+        ParticipationRequest request = requestRepository.findByIdAndRequester_Id(requestId, userId);
+        if (request == null) {
+            throw new EntityNotFoundException("Request ID " + requestId + " by requester ID " + userId + " not found.");
+        }
         request.setStatus(ParticipationRequest.Status.CANCELED);
         log.trace("Отмена заявки ID {} от пользователя ID {}, статус - {}.", requestId, userId, request.getStatus());
         return ParticipationRequestMapper.toDto(requestRepository.save(request));

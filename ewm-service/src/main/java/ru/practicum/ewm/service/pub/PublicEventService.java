@@ -11,6 +11,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.common.ForbiddenRequestException;
 import ru.practicum.ewm.model.event.*;
+import ru.practicum.ewm.model.request.ParticipationRequest;
 import ru.practicum.ewm.repository.EventRepository;
 import ru.practicum.ewm.repository.RequestRepository;
 import ru.practicum.ewm.statclient.EndpointHitDto;
@@ -22,7 +23,9 @@ import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -65,13 +68,22 @@ public class PublicEventService {
         String[] urisArray = uris.toArray(new String[0]);
         List<ViewStats> stats = client.receiveStat(LocalDateTime.now().minusHours(1), LocalDateTime.now(), urisArray, true);
 
+        // Получение данных о подтверждённых заявках
+        List<Long> idsForViews = new ArrayList<>();
+        events.forEach((Event e) -> idsForViews.add(e.getId()));
+        List<ParticipationRequest> requestList = requestRepository.findAllByEvent_IdInAndStatus(idsForViews, ParticipationRequest.Status.CONFIRMED);
+        Map<Long, Integer> confirmedRequests = new HashMap<>();
+        for (long eventId : idsForViews) {
+            long amount = requestList.stream().filter(x -> x.getEvent().getId() == eventId).count();
+            confirmedRequests.put(eventId, (int)amount);
+        }
+
         List<EventShortDto> result = new ArrayList<>();
         int counter = 0;
         for (Event event : events) {
             // Добавление данных о просмотрах события и подтверждённых заявках
             int views = stats.get(counter++).getHits();
-            int confirmedRequests = requestRepository.getConfirmedRequestsAmount(event.getId());
-            result.add(EventMapper.toShortDto(event, confirmedRequests, views));
+            result.add(EventMapper.toShortDto(event, confirmedRequests.get(event.getId()), views));
         }
         try {
             switch (SortBy.valueOf(sort)) {

@@ -41,10 +41,19 @@ public class AdminCompilationService {
                 compilation.getId(),
                 Arrays.toString(dto.getEvents()));
 
+        // Получаем информацию о просмотрах
         Map<Long,Integer> views = new HashMap<>();
+        if (events.size() != 0) {
+            List<Long> idsForViews = compilation.getEvents()
+                    .stream()
+                    .map(Event::getId)
+                    .collect(Collectors.toList());
+            views = client.getViews(idsForViews);
+        }
+
+        // Получаем информацию о подтверждённых заявках
         Map<Long,Integer> confirmedRequests = new HashMap<>();
         for (Event event : compilation.getEvents()) {
-            views.put(event.getId(), client.getViews(event.getId()));
             confirmedRequests.put(event.getId(), requestRepository.getConfirmedRequestsAmount(event.getId()));
         }
         return CompilationMapper.toDto(compilation, confirmedRequests, views);

@@ -17,25 +17,29 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.Charset;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 @Slf4j
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class StatClient {
     String url;
+    String appName;
     Gson gson;
     static HttpClient client = HttpClient.newHttpClient();
     static HttpResponse.BodyHandler<String> handler = HttpResponse.BodyHandlers.ofString();
     static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    static Charset charset = java.nio.charset.StandardCharsets.UTF_8;
 
     @Autowired
-    public StatClient(@Value("${statServerUrl:http://localhost:9090}") String url, Gson gson) {
+    public StatClient(@Value("${statServerUrl:http://localhost:9090}") String url,
+                      @Value("${appName}") String appName,
+                      Gson gson) {
         this.url = url;
+        this.appName = appName;
         this.gson = gson;
     }
 
@@ -62,15 +66,17 @@ public class StatClient {
     public List<ViewStats> receiveStat(LocalDateTime start, LocalDateTime end, String[] uris, boolean unique) {
         StringBuilder sb = new StringBuilder();
         sb.append("?start=");
-        sb.append(URLEncoder.encode(start.format(formatter),java.nio.charset.StandardCharsets.UTF_8));
+        sb.append(URLEncoder.encode(start.format(formatter),charset));
         sb.append("&end=");
-        sb.append(URLEncoder.encode(end.format(formatter),java.nio.charset.StandardCharsets.UTF_8));
+        sb.append(URLEncoder.encode(end.format(formatter),charset));
         for (String uri : uris) {
             sb.append("&uris=");
-            sb.append(URLEncoder.encode(uri,java.nio.charset.StandardCharsets.UTF_8));
+            sb.append(URLEncoder.encode(uri,charset));
         }
         sb.append("&unique=");
         sb.append(unique);
+        sb.append("&app=");
+        sb.append(appName);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .GET()
@@ -86,10 +92,11 @@ public class StatClient {
                 log.trace("Получен ответ на GET-запрос в Stats.");
                 result = response.body();
             } else {
-                log.trace("Ошибка: не получен ответ на GET-запрос в Stats.");
+                throw new IOException();
             }
         } catch (IOException | InterruptedException e) {
-            System.out.println(e.getMessage());
+            log.trace("Ошибка: не получен ответ на GET-запрос в Stats.");
+            throw new RuntimeException("Ошибка: не получен ответ на GET-запрос в Stats.");
         }
 
         List<ViewStats> stats = new ArrayList<>();
@@ -107,5 +114,21 @@ public class StatClient {
         String[] uri = new String[]{"/events/" + eventId};
         List<ViewStats> stats = receiveStat(LocalDateTime.now().minusHours(1), LocalDateTime.now(), uri, true);
         return stats.get(0).getHits();
+    }
+
+    public Map<Long, Integer> getViews(List<Long> eventIds) {
+        List<ViewStats> views = receiveStat(
+                LocalDateTime.now().minusHours(1),
+                LocalDateTime.now(),
+                eventIds
+                        .stream()
+                        .map((Long s) -> "/events/" + s)
+                        .toArray(String[]::new),
+                true);
+        Map<Long, Integer> viewsMap = new HashMap<>();
+        for (int i = 0; i < eventIds.size(); i++) {
+            viewsMap.put(eventIds.get(i), views.get(i).getHits());
+        }
+        return viewsMap;
     }
 }

@@ -1,4 +1,4 @@
-package ru.practicum.ewm;
+package ru.practicum.ewm.model;
 
 import lombok.*;
 
@@ -17,8 +17,8 @@ public class EndpointHit {
     private long id;
 
     @NonNull
-    @Column(name = "app", nullable = false, length = 255)
-    private String app;
+    @ManyToOne @JoinColumn(name = "app_id", nullable = false)
+    private App app;
 
     @NonNull
     @Column(name = "uri", nullable = false, length = 255)
@@ -31,4 +31,13 @@ public class EndpointHit {
     @NonNull
     @Column(name = "time_stamp", nullable = false)
     private LocalDateTime timeStamp;
+
+    @Override
+    public boolean equals(Object obj) {
+        EndpointHit endpointHit = (EndpointHit) obj;
+        if (obj.getClass() != EndpointHit.class) {
+            return false;
+        }
+        return ip.equals(endpointHit.getIp());
+    }
 }

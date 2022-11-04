@@ -38,7 +38,7 @@ public class PublicCategoryService {
     // Получение информации о категории по её идентификатору
     public CategoryDto getCategory(long catId) {
         Category category = repository.findById(catId).orElseThrow(() -> {
-        throw new EntityNotFoundException("Category with requested ID not found.");
+            throw new EntityNotFoundException("Category with requested ID not found.");
         });
         log.trace("По запросу получена категория ID {}.", catId);
         return CategoryMapper.toDto(category);

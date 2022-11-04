@@ -1,4 +1,4 @@
-package ru.practicum.ewm;
+package ru.practicum.ewm.model;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -10,10 +10,10 @@ import java.time.format.DateTimeFormatter;
 public class EndpointHitMapper {
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    static EndpointHit toEndpointHit(EndpointHitDto dto) {
+    public static EndpointHit toEndpointHit(EndpointHitDto dto, App app) {
         LocalDateTime timeStamp = (dto.getTimeStamp() != null) ?
                 LocalDateTime.parse(dto.getTimeStamp(), formatter) :
                 LocalDateTime.now();
-        return new EndpointHit(dto.getApp(), dto.getUri(), dto.getIp(), timeStamp);
+        return new EndpointHit(app, dto.getUri(), dto.getIp(), timeStamp);
     }
 }

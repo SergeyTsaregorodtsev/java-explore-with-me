@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -43,94 +44,94 @@ public class AdminEventService {
         Pageable page = PageRequest.of(from / size, size, sortById);
         Iterable<Event> events = eventRepository.findAll(formatExpression(filter), page);
         List<EventFullDto> result = new ArrayList<>();
+
+        // Получаем информацию по просмотрам
+        List<Long> idsForViews = new ArrayList<>();
+        events.forEach((Event e) -> idsForViews.add(e.getId()));
+        Map<Long, Integer> views = client.getViews(idsForViews);
+
         for (Event event : events) {
             result.add(EventMapper.toFullDto(
                     event,
                     requestRepository.getConfirmedRequestsAmount(event.getId()),
-                    client.getViews(event.getId())));
+                    views.get(event.getId())));
         }
         log.trace("По запросу получены {} событий.", result.size());
         return result;
     }
 
     public EventFullDto updateEvent(long eventId, AdminUpdateEventRequest request) {
-        Optional<Event> event = eventRepository.findById(eventId);
-        if (event.isEmpty()) {
+        Event event = eventRepository.findById(eventId).orElseThrow(() -> {
             throw new EntityNotFoundException("Event with requested ID not found.");
-        }
-        Event updEvent = event.get();
-
+        });
         Long categoryId = request.getCategory();
         if (categoryId != null) {
-            Optional<Category> category = categoryRepository.findById(categoryId);
-            if (category.isEmpty()) {
+            Category category = categoryRepository.findById(categoryId).orElseThrow(() -> {
                 throw new EntityNotFoundException("Category with requested ID not found.");
-            }
-            updEvent.setCategory(category.get());
+            });
+            event.setCategory(category);
         }
         String title = request.getTitle();
-        if (title != null) {
-            updEvent.setTitle(title);
+        if (title != null && !title.isBlank()) {
+            event.setTitle(title);
         }
         String annotation = request.getAnnotation();
-        if (annotation != null) {
-            updEvent.setAnnotation(annotation);
+        if (annotation != null && !annotation.isBlank()) {
+            event.setAnnotation(annotation);
         }
         String description = request.getDescription();
-        if (description != null) {
-            updEvent.setDescription(description);
+        if (description != null && !description.isBlank()) {
+            event.setDescription(description);
         }
         String eventDate = request.getEventDate();
         if (eventDate != null) {
-            updEvent.setEventDate(LocalDateTime.parse(eventDate, formatter));
+            event.setEventDate(LocalDateTime.parse(eventDate, formatter));
         }
         Boolean paid = request.getPaid();
         if (paid != null) {
-            updEvent.setPaid(paid);
+            event.setPaid(paid);
         }
         Integer participantLimit = request.getParticipantLimit();
         if (participantLimit != null) {
-            updEvent.setParticipantLimit(participantLimit);
+            event.setParticipantLimit(participantLimit);
         }
         Boolean requestModeration = request.getRequestModeration();
         if (requestModeration != null) {
-            updEvent.setRequestModeration(requestModeration);
+            event.setRequestModeration(requestModeration);
         }
         Location location = request.getLocation();
         if (location != null) {
-            updEvent.setLocationLat(location.getLat());
-            updEvent.setLocationLon(location.getLon());
+            event.setLocationLat(location.getLat());
+            event.setLocationLon(location.getLon());
         }
-        eventRepository.save(updEvent);
+        eventRepository.save(event);
 
-        log.trace("Event ID {} updated.", updEvent.getId());
+        log.trace("Event ID {} updated.", event.getId());
         return EventMapper.toFullDto(
-                updEvent,
-                requestRepository.getConfirmedRequestsAmount(updEvent.getId()),
-                client.getViews(updEvent.getId()));
+                event,
+                requestRepository.getConfirmedRequestsAmount(event.getId()),
+                client.getViews(event.getId()));
     }
 
     public EventFullDto publishEvent(long eventId) {
-        Optional<Event> event = eventRepository.findById(eventId);
-        if (event.isEmpty()) {
+        Event event = eventRepository.findById(eventId).orElseThrow(() -> {
             throw new EntityNotFoundException("Event with requested ID not found.");
-        }
-        Event pubEvent = event.get();
+        });
         // Дата начала события должна быть не ранее чем за час от даты публикации
-        LocalDateTime eventDate = pubEvent.getEventDate();
+        LocalDateTime eventDate = event.getEventDate();
         if (LocalDateTime.now().plusHours(1).isAfter(eventDate)) {
             throw new ForbiddenRequestException("Error: Дата начала события должна быть не ранее чем за час от даты публикации.");
         }
         // Событие должно быть в состоянии ожидания публикации
-        if (pubEvent.getState() != Event.State.PENDING) {
+        if (event.getState() != Event.State.PENDING) {
             throw new ForbiddenRequestException("Error: Событие должно быть в состоянии ожидания публикации.");
         }
 
-        pubEvent.setState(Event.State.PUBLISHED);
-        pubEvent.setPublishedOn(LocalDateTime.now());
+        event.setState(Event.State.PUBLISHED);
+        event.setPublishedOn(LocalDateTime.now());
         log.trace("Event ID {} published.", eventId);
         return EventMapper.toFullDto(
-                eventRepository.save(pubEvent),
+                eventRepository.save(event),
                 requestRepository.getConfirmedRequestsAmount(eventId),
                 client.getViews(eventId));
     }

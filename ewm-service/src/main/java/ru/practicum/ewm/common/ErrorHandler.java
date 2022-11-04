@@ -66,7 +66,7 @@ public class ErrorHandler {
     public ApiError handleThrowable(final Throwable e) {
         log.trace("Exception: " + HttpStatus.INTERNAL_SERVER_ERROR.name());
         return new ApiError(
-                HttpStatus.FORBIDDEN.name(),
+                HttpStatus.INTERNAL_SERVER_ERROR.name(),
                 "Error occurred",
                 e.getMessage(),
                 LocalDateTime.now().format(formatter));

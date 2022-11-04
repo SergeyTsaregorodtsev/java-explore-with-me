@@ -1,8 +1,11 @@
-package ru.practicum.ewm;
+package ru.practicum.ewm.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.ewm.model.EndpointHitDto;
+import ru.practicum.ewm.service.StatService;
+import ru.practicum.ewm.model.ViewStats;
 
 import java.util.Arrays;
 import java.util.List;
@@ -24,9 +27,10 @@ public class StatController {
     public List<ViewStats> get(@RequestParam(name = "start") String start,
                                @RequestParam(name = "end") String end,
                                @RequestParam(name = "uris") String[] uris,
-                               @RequestParam(name = "unique", defaultValue = "false") boolean unique) {
+                               @RequestParam(name = "unique", defaultValue = "false") boolean unique,
+                               @RequestParam(name = "app") String app) {
         log.trace("Получен GET-запрос: start-{} , end-{}, uris-{}, unique-{}.",
                 start, end, Arrays.toString(uris), unique);
-        return service.get(start, end, uris, unique);
+        return service.get(start, end, uris, unique, app);
     }
 }

@@ -77,7 +77,7 @@ public class PrivateEventController {
                                                   @PathVariable long reqId) {
         log.trace("Получен PATCH-запрос на подтверждение заявки ID {} пользователя ID {} на событие ID {}.",
                 reqId, userId, eventId);
-        return service.confirmRequest(userId, eventId, reqId, true);
+        return service.confirmRequest(userId, eventId, reqId);
     }
 
     // Отклонение чужой заявки на участие в событии текущего пользователя
@@ -87,6 +87,6 @@ public class PrivateEventController {
                                                   @PathVariable long reqId) {
         log.trace("Получен PATCH-запрос на отклонение заявки ID {} пользователя ID {} на событие ID {}.",
                 reqId, userId, eventId);
-        return service.confirmRequest(userId, eventId, reqId, false);
+        return service.rejectRequest(userId, eventId, reqId);
     }
 }
