@@ -28,7 +28,7 @@ public class StatController {
                                @RequestParam(name = "end") String end,
                                @RequestParam(name = "uris") String[] uris,
                                @RequestParam(name = "unique", defaultValue = "false") boolean unique,
-                               @RequestParam(name = "app") String app) {
+                               @RequestParam(name = "app", defaultValue = "ewm-main-service") String app) {
         log.trace("Получен GET-запрос: start-{} , end-{}, uris-{}, unique-{}.",
                 start, end, Arrays.toString(uris), unique);
         return service.get(start, end, uris, unique, app);
