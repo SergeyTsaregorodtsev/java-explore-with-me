@@ -10,8 +10,6 @@ import java.util.List;
 @Repository
 public interface StatRepository extends JpaRepository<EndpointHit, Long> {
 
-    List<EndpointHit> findAllByUriAndApp_IdAndTimeStampBetween(String uri, Long appId, LocalDateTime start, LocalDateTime end);
-
-    List<EndpointHit> findAllByApp_IdAndUriInAndTimeStampBetween
-            (Long appId, List<String> uris, LocalDateTime start, LocalDateTime end);
+    List<EndpointHit> findAllByApp_IdAndUriInAndTimeStampBetween(
+            Long appId, List<String> uris, LocalDateTime start, LocalDateTime end);
 }

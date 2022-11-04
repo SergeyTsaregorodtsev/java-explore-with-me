@@ -54,7 +54,7 @@ public class PublicCompilationService {
                 compilation.getEvents().isEmpty() ? null : getViews(compilation));
     }
 
-    private Map<Long, Integer> getViews (Compilation compilation) {
+    private Map<Long, Integer> getViews(Compilation compilation) {
         List<Long> idsForViews = compilation.getEvents()
                 .stream()
                 .map(Event::getId)
@@ -62,7 +62,7 @@ public class PublicCompilationService {
         return client.getViews(idsForViews);
     }
 
-    private Map<Long, Integer> getConfirmedRequests (Compilation compilation) {
+    private Map<Long, Integer> getConfirmedRequests(Compilation compilation) {
         Map<Long,Integer> confirmedRequests = new HashMap<>();
         for (Event event : compilation.getEvents()) {
             confirmedRequests.put(event.getId(), requestRepository.getConfirmedRequestsAmount(event.getId()));

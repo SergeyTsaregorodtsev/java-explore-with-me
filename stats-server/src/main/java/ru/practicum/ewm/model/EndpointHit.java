@@ -40,4 +40,9 @@ public class EndpointHit {
         }
         return ip.equals(endpointHit.getIp());
     }
+
+    @Override
+    public int hashCode() {
+        return Long.hashCode(id);
+    }
 }
