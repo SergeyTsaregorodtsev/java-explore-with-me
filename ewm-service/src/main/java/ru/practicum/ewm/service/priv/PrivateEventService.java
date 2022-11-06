@@ -11,15 +11,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.common.ForbiddenRequestException;
 import ru.practicum.ewm.model.category.Category;
+import ru.practicum.ewm.model.comment.CommentMapper;
 import ru.practicum.ewm.model.event.*;
 import ru.practicum.ewm.model.request.ParticipationRequest;
 import ru.practicum.ewm.model.request.ParticipationRequestDto;
 import ru.practicum.ewm.model.request.ParticipationRequestMapper;
 import ru.practicum.ewm.model.user.User;
-import ru.practicum.ewm.repository.CategoryRepository;
-import ru.practicum.ewm.repository.EventRepository;
-import ru.practicum.ewm.repository.RequestRepository;
-import ru.practicum.ewm.repository.UserRepository;
+import ru.practicum.ewm.repository.*;
 import ru.practicum.ewm.statclient.StatClient;
 
 import javax.persistence.EntityNotFoundException;
@@ -39,6 +37,7 @@ public class PrivateEventService {
     CategoryRepository categoryRepository;
     UserRepository userRepository;
     RequestRepository requestRepository;
+    CommentRepository commentRepository;
     StatClient client;
     static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -125,7 +124,11 @@ public class PrivateEventService {
         return EventMapper.toFullDto(
                 event,
                 requestRepository.getConfirmedRequestsAmount(event.getId()),
-                client.getViews(event.getId()));
+                client.getViews(event.getId()),
+                commentRepository.findAllByEvent_Id(event.getId())
+                        .stream()
+                        .map(CommentMapper::toDto)
+                        .collect(Collectors.toList()));
     }
 
     // Добавление нового события
@@ -145,7 +148,7 @@ public class PrivateEventService {
 
         Event event = eventRepository.save(EventMapper.toEvent(eventDto, user, category, createdOn));
         log.trace("Добавлено событие {}, ID {}.", event.getTitle(), event.getId());
-        return EventMapper.toFullDto(event, 0,0);
+        return EventMapper.toFullDto(event, 0,0, new ArrayList<>());
     }
 
     // Получение полной информации о событии добавленном текущим пользователем
@@ -158,7 +161,11 @@ public class PrivateEventService {
         return EventMapper.toFullDto(
                 event,
                 requestRepository.getConfirmedRequestsAmount(event.getId()),
-                client.getViews(eventId));
+                client.getViews(eventId),
+                commentRepository.findAllByEvent_Id(eventId)
+                        .stream()
+                        .map(CommentMapper::toDto)
+                        .collect(Collectors.toList()));
     }
 
     // Отмена события добавленного текущим пользователем
@@ -176,7 +183,11 @@ public class PrivateEventService {
         return EventMapper.toFullDto(
                 eventRepository.save(event),
                 requestRepository.getConfirmedRequestsAmount(event.getId()),
-                client.getViews(eventId));
+                client.getViews(eventId),
+                commentRepository.findAllByEvent_Id(eventId)
+                        .stream()
+                        .map(CommentMapper::toDto)
+                        .collect(Collectors.toList()));
     }
 
     // Получение информации о запросах на участие в событии текущего пользователя

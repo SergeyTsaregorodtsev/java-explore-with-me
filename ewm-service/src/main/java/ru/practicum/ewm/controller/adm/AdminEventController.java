@@ -20,6 +20,7 @@ import java.util.List;
 public class AdminEventController {
     private final AdminEventService service;
 
+    // Получение информации о событиях
     @GetMapping
     public List<EventFullDto> getEvents(@RequestParam long[] users,
                                         @RequestParam String[] states,
@@ -36,6 +37,7 @@ public class AdminEventController {
         return service.getEvents(new EventAdminFilter(users, states, categories, rangeStart, rangeEnd), from, size);
     }
 
+    // Обновление сведений о событии
     @PutMapping("/{eventId}")
     public EventFullDto updateEvent(@PathVariable long eventId,
                                     @RequestBody AdminUpdateEventRequest request) {
@@ -43,12 +45,14 @@ public class AdminEventController {
         return service.updateEvent(eventId, request);
     }
 
+    // Публикация события
     @PatchMapping("/{eventId}/publish")
     public EventFullDto publishEvent(@PathVariable long eventId) {
         log.trace("Получен PATCH-запрос на публикацию события ID {}.", eventId);
         return service.publishEvent(eventId);
     }
 
+    // Отказ в публикации события
     @PatchMapping("/{eventId}/reject")
     public EventFullDto rejectEvent(@PathVariable int eventId) {
         log.trace("Получен PATCH-запрос на отказ в публикации события ID {}.", eventId);

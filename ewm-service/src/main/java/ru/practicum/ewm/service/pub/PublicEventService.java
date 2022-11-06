@@ -10,8 +10,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.common.ForbiddenRequestException;
+import ru.practicum.ewm.model.comment.CommentMapper;
 import ru.practicum.ewm.model.event.*;
 import ru.practicum.ewm.model.request.ParticipationRequest;
+import ru.practicum.ewm.repository.CommentRepository;
 import ru.practicum.ewm.repository.EventRepository;
 import ru.practicum.ewm.repository.RequestRepository;
 import ru.practicum.ewm.statclient.EndpointHitDto;
@@ -26,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -33,16 +36,19 @@ import java.util.Map;
 public class PublicEventService {
     EventRepository eventRepository;
     RequestRepository requestRepository;
+    CommentRepository commentRepository;
     StatClient client;
     static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     String appName;
 
     public PublicEventService(EventRepository eventRepository,
                               RequestRepository requestRepository,
+                              CommentRepository commentRepository1,
                               StatClient client,
                               @Value("${appName}") String appName) {
         this.eventRepository = eventRepository;
         this.requestRepository = requestRepository;
+        this.commentRepository = commentRepository1;
         this.client = client;
         this.appName = appName;
     }
@@ -121,7 +127,10 @@ public class PublicEventService {
         List<ViewStats> stats = client.receiveStat(LocalDateTime.now().minusHours(1), LocalDateTime.now(), uri, true);
         int views = stats.get(0).getHits();
         int confirmedRequests = requestRepository.getConfirmedRequestsAmount(eventId);
-        return EventMapper.toFullDto(event, confirmedRequests, views);
+        return EventMapper.toFullDto(event, confirmedRequests, views, commentRepository.findAllByEvent_Id(eventId)
+                .stream()
+                .map(CommentMapper::toDto)
+                .collect(Collectors.toList()));
     }
 
     private BooleanExpression formatExpression(EventUserFilter filter) {

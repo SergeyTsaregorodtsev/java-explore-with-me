@@ -12,8 +12,10 @@ import org.springframework.stereotype.Service;
 import ru.practicum.ewm.common.ForbiddenRequestException;
 import ru.practicum.ewm.model.Location;
 import ru.practicum.ewm.model.category.Category;
+import ru.practicum.ewm.model.comment.CommentMapper;
 import ru.practicum.ewm.model.event.*;
 import ru.practicum.ewm.repository.CategoryRepository;
+import ru.practicum.ewm.repository.CommentRepository;
 import ru.practicum.ewm.repository.EventRepository;
 import ru.practicum.ewm.repository.RequestRepository;
 import ru.practicum.ewm.statclient.StatClient;
@@ -25,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -34,6 +37,7 @@ public class AdminEventService {
     EventRepository eventRepository;
     CategoryRepository categoryRepository;
     RequestRepository requestRepository;
+    CommentRepository commentRepository;
     StatClient client;
     static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -54,12 +58,17 @@ public class AdminEventService {
             result.add(EventMapper.toFullDto(
                     event,
                     requestRepository.getConfirmedRequestsAmount(event.getId()),
-                    views.get(event.getId())));
+                    views.get(event.getId()),
+                    commentRepository.findAllByEvent_Id(event.getId())
+                            .stream()
+                            .map(CommentMapper::toDto)
+                            .collect(Collectors.toList())));
         }
         log.trace("По запросу получены {} событий.", result.size());
         return result;
     }
 
+    // Обновление сведений о событии
     public EventFullDto updateEvent(long eventId, AdminUpdateEventRequest request) {
         Event event = eventRepository.findById(eventId).orElseThrow(() -> {
             throw new EntityNotFoundException("Event with requested ID not found.");
@@ -110,9 +119,14 @@ public class AdminEventService {
         return EventMapper.toFullDto(
                 event,
                 requestRepository.getConfirmedRequestsAmount(event.getId()),
-                client.getViews(event.getId()));
+                client.getViews(event.getId()),
+                commentRepository.findAllByEvent_Id(event.getId())
+                        .stream()
+                        .map(CommentMapper::toDto)
+                        .collect(Collectors.toList()));
     }
 
+    // Публикация события
     public EventFullDto publishEvent(long eventId) {
         Event event = eventRepository.findById(eventId).orElseThrow(() -> {
             throw new EntityNotFoundException("Event with requested ID not found.");
@@ -133,9 +147,14 @@ public class AdminEventService {
         return EventMapper.toFullDto(
                 eventRepository.save(event),
                 requestRepository.getConfirmedRequestsAmount(eventId),
-                client.getViews(eventId));
+                client.getViews(eventId),
+                commentRepository.findAllByEvent_Id(eventId)
+                        .stream()
+                        .map(CommentMapper::toDto)
+                        .collect(Collectors.toList()));
     }
 
+    // Отказ в публикации события
     public EventFullDto rejectEvent(long eventId) {
         Optional<Event> event = eventRepository.findById(eventId);
         if (event.isEmpty()) {
@@ -152,7 +171,11 @@ public class AdminEventService {
         return EventMapper.toFullDto(
                 eventRepository.save(rejectedEvent),
                 requestRepository.getConfirmedRequestsAmount(eventId),
-                client.getViews(eventId));
+                client.getViews(eventId),
+                commentRepository.findAllByEvent_Id(eventId)
+                        .stream()
+                        .map(CommentMapper::toDto)
+                        .collect(Collectors.toList()));
     }
 
     private BooleanExpression formatExpression(EventAdminFilter filter) {
