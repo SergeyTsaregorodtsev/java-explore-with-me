@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import ru.practicum.ewm.common.StatServerException;
 
 import java.io.IOException;
 import java.net.URI;
@@ -96,7 +97,7 @@ public class StatClient {
             }
         } catch (IOException | InterruptedException e) {
             log.trace("Ошибка: не получен ответ на GET-запрос в Stats.");
-            throw new RuntimeException("Ошибка: не получен ответ на GET-запрос в Stats.");
+            throw new StatServerException("Ошибка: не получен ответ на GET-запрос в Stats.");
         }
 
         List<ViewStats> stats = new ArrayList<>();
