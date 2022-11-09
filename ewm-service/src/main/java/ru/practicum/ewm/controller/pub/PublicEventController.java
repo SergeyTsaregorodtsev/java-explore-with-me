@@ -30,17 +30,24 @@ public class PublicEventController {
     public List<EventShortDto> getEvents(@RequestParam(name = "text") String text,
                                          @RequestParam(name = "categories") long[] categories,
                                          @RequestParam(name = "paid") boolean paid,
-                                         @RequestParam(name = "rangeStart") String rangeStart,
-                                         @RequestParam(name = "rangeEnd") String rangeEnd,
+                                         @RequestParam(name = "rangeStart", defaultValue = "") String rangeStart,
+                                         @RequestParam(name = "rangeEnd", defaultValue = "") String rangeEnd,
                                          @RequestParam(name = "onlyAvailable", defaultValue = "false") boolean onlyAvailable,
-                                         @RequestParam(name = "sort") String sort,
+                                         @RequestParam(name = "sort", defaultValue = "") String sort,
                                          @PositiveOrZero @RequestParam(name = "from", defaultValue = "0") int from,
                                          @Positive @RequestParam(name = "size", defaultValue = "10") int size,
                                          HttpServletRequest request) {
         log.trace("Получен GET-запрос по событиям text - {}, категории - {}, paid - {}, start - {}, end - {}," +
                         " onlyAvailable - {}, sort - {}, from = {}, size = {}.",
                 text, Arrays.toString(categories), paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
-        return service.getEvents(new EventUserFilter(text, categories, paid, rangeStart, rangeEnd, onlyAvailable), sort, from, size, request);
+        return service.getEvents(new EventUserFilter(
+                        text,
+                        categories,
+                        paid,
+                        rangeStart.isEmpty() ? null : rangeStart,
+                        rangeEnd.isEmpty() ? null : rangeEnd,
+                        onlyAvailable),
+                sort, from, size, request);
     }
 
     // Получение подробной информации об опубликованном событии по его идентификатору

@@ -11,6 +11,7 @@ import lombok.experimental.FieldDefaults;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ApiError {
+    StackTraceElement[] errors; //Список стектрейсов или описания ошибок
     String status; // Код статуса HTTP-ответа (example: FORBIDDEN)
     String reason; // Общее описание причины ошибки
     String message; // Сообщение об ошибке

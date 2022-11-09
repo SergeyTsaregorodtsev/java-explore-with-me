@@ -22,11 +22,11 @@ public class AdminEventController {
 
     // Получение информации о событиях
     @GetMapping
-    public List<EventFullDto> getEvents(@RequestParam long[] users,
-                                        @RequestParam String[] states,
-                                        @RequestParam long[] categories,
-                                        @RequestParam String rangeStart,
-                                        @RequestParam String rangeEnd,
+    public List<EventFullDto> getEvents(@RequestParam(name = "users") long[] users,
+                                        @RequestParam(name = "states", defaultValue = "") String[] states,
+                                        @RequestParam(name = "categories") long[] categories,
+                                        @RequestParam(name = "rangeStart", defaultValue = "") String rangeStart,
+                                        @RequestParam(name = "rangeEnd", defaultValue = "") String rangeEnd,
                                         @PositiveOrZero @RequestParam(name = "from", defaultValue = "0") int from,
                                         @Positive @RequestParam(name = "size", defaultValue = "10") int size) {
         log.trace("Получен GET-запрос по событиям пользователей IDs - {}, статусы - {}, категории - {}, start - {}, end - {}, from = {}, size = {}.",
@@ -34,7 +34,13 @@ public class AdminEventController {
                 Arrays.toString(states),
                 Arrays.toString(categories),
                 rangeStart, rangeEnd, from, size);
-        return service.getEvents(new EventAdminFilter(users, states, categories, rangeStart, rangeEnd), from, size);
+        return service.getEvents(new EventAdminFilter(
+                users,
+                states.length == 0 ? null : states,
+                categories,
+                rangeStart.isEmpty() ? null : rangeStart,
+                rangeEnd.isEmpty() ? null : rangeEnd),
+                from, size);
     }
 
     // Обновление сведений о событии

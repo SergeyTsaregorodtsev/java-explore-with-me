@@ -13,6 +13,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql_ewm:5432/explore-with-me
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=iamroot
+      - statServerUrl=http://stats-server:9090
 
   stats-server:
     build: stats-server/
