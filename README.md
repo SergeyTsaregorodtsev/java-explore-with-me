@@ -40,8 +40,8 @@ API основного сервиса разделён на три слоя.
 - Управление пользователями — добавление, просмотр и удаление;
 - Управление комментариями - просмотр и удаление.
 
-Диаграмма базы данных модуля:
-https://user-images.githubusercontent.com/....png
+
+[Диаграмма базы данных основного модуля](https://github.com/SergeyTsaregorodtsev/java-explore-with-me/blob/main/explore-with-me-bd.png)
 
 Спецификация API модуля:
 
@@ -50,8 +50,7 @@ https://user-images.githubusercontent.com/....png
 Модуль статистики призван собирать информацию о количестве обращений пользователей к информации о событиях.
 На основе этой информации формируется статистика для использования в основном модуле.
 
-Диаграмма базы данных модуля:
-https://user-images.githubusercontent.com/....png
+[Диаграмма базы данных модуля статистики](https://github.com/SergeyTsaregorodtsev/java-explore-with-me/blob/main/explore-with-me-stats-bd.png)
 
 Спецификация API модуля:
 
